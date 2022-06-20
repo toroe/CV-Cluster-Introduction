@@ -1,0 +1,46 @@
+
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: cv03-cnn-training-2
+  labels:
+    app: cv03-cnn-training-2
+spec:
+  template:
+    metadata:
+      labels:
+        app: cv03-cnn-training-2
+    spec:
+      containers:
+        - name: cv03-cnn-training-2
+          image: registry.datexis.com/s41140/cv03
+          command: ["python", "cnn.py",
+                    "--learning_rate", "1e-3",
+                    "--batch_size", "128",
+                    "--model_name", "standard2",
+                    "--num_workers", "8",
+                    "--num_epochs", "50",
+                    "--save_dir", "/pvc/cv03/images"
+                   ]
+          env:
+          - name: LANG
+            value: 'C.UTF-8'
+          - name: PYTHONUNBUFFERED
+            value: '1'
+          resources:
+            requests:
+              cpu: "1"
+            limits:
+              nvidia.com/gpu: "1"
+          volumeMounts:
+            - name: cv-pvc
+              mountPath: /pvc
+      nodeSelector:
+        gpu: a100
+      volumes:
+        - name: cv-pvc
+          persistentVolumeClaim:
+            claimName: cv-pvc
+      imagePullSecrets:
+        - name: private-registry-auth
+      restartPolicy: Never

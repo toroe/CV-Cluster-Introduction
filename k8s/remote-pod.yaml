@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: remote-work
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: remote-work
+  template:
+    metadata:
+      labels:
+        app: remote-work
+    spec:
+      containers:
+      - name: remote-work
+        image: registry.datexis.com/s41140/cv03
+        securityContext:
+          runAsUser: 0
+        volumeMounts:
+        - name: cv-pvc
+          mountPath: /pvc
+        - name: ssh-key
+          mountPath: /root/ssh-key
+        resources:
+          limits:
+            nvidia.com/gpu: 1
+          requests:
+            nvidia.com/gpu: 1
+        ports:
+          - containerPort: 22
+        lifecycle:
+          postStart:
+            exec:
+              command: ["/bin/sh", "-c", "cat /root/ssh-key/id_rsa.pub >> /root/.ssh/authorized_keys"]
+  #      tolerations:
+  #      - operator: "Exists"
+  #      - key: "nvidia.com/gpu"
+      nodeSelector:
+        gpu: a100
+      imagePullSecrets:
+      - name: private-registry-auth
+      volumes:
+        - name: ssh-key
+          secret:
+            secretName: my-ssh-laptop-key
+            defaultMode: 256
+        - name: cv-pvc
+          persistentVolumeClaim:
+            claimName: cv-pvc
