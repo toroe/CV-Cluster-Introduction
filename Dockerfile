@@ -14,7 +14,7 @@ RUN apt-get -yq install openssh-server; \
   mkdir /root/.ssh && chmod 700 /root/.ssh; \
   touch /root/.ssh/authorized_keys
 
-RUN pip3 install --upgrade pip matplotlib numpy opencv-contrib-python scikit-learn scipy torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu113
+RUN pip3 install --upgrade pip matplotlib numpy opencv-contrib-python scikit-learn scipy tensorboard torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu113
 
 
 

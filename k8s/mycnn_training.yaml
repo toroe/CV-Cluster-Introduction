@@ -20,7 +20,8 @@ spec:
                     "--model_name", "standard",
                     "--num_workers", "8",
                     "--num_epochs", "50",
-                    "--save_dir", "/pvc/cv03/images"
+                    "--save_dir", "/pvc/cv03/images",
+                    "--log_dir", "/pvc/logs/cv03/"
                    ]
           env:
           - name: LANG
