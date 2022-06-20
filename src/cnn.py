@@ -153,14 +153,15 @@ def training(model, data_loader, optimizer, criterion, device):
         # backward
         loss.backward()
         optimizer.step()
-
+        writer.add_scalar(f"{model.name()}/Train_loss", loss, train_log_iter)
+        writer.add_scalar(f"{model.name()}/Train_acc", torch.sum(preds==labels.data), train_log_iter)
+        train_log_iter =+ 1
         # statistics
         running_loss += loss.item() * inputs.size(0)
         running_corrects += torch.sum(preds == labels.data)
 
-        if batch_idx % 10 == 0:
-            writer.add_scalar(f"{model.name()}/Train_loss", running_loss / len(data_loader.dataset))
-            writer.add_scalar(f"{model.name()}/Train_acc", running_corrects.double() / len(data_loader.dataset))
+        if batch_idx % 50 == 0:
+            
             print(f'Training Batch: {batch_idx:4} of {len(data_loader)}')
 
     epoch_loss = running_loss / len(data_loader.dataset)
@@ -173,7 +174,7 @@ def training(model, data_loader, optimizer, criterion, device):
     return epoch_loss, epoch_acc
 
 
-def test(model, data_loader, criterion, writer, device):
+def test(model, data_loader, criterion, device):
     model.eval()
 
     running_loss = 0.0
@@ -181,7 +182,6 @@ def test(model, data_loader, criterion, writer, device):
 
     # do not compute gradients
     with torch.no_grad():
-
         for batch_idx, (inputs, labels) in enumerate(data_loader):
 
             inputs = inputs.to(device)
@@ -191,14 +191,17 @@ def test(model, data_loader, criterion, writer, device):
             loss = criterion(outputs, labels)
 
             _, preds = torch.max(outputs, 1)
-
+            writer.add_scalar(f"{model.name()}/Train_loss", loss, test_log_iter)
+            writer.add_scalar(f"{model.name()}/Train_acc", torch.sum(preds==labels.data), test_log_iter)
+            test_log_iter =+ 1
             # statistics
             running_loss += loss.item() * inputs.size(0)
             running_corrects += torch.sum(preds == labels.data)
 
-            if batch_idx % 10 == 0:
-                writer.add_scalar(f"{model.name()}/Test_loss", running_loss / len(data_loader.dataset))
-                writer.add_scalar(f"{model.name()}/Test_acc", running_corrects.double() / len(data_loader.dataset))
+            if batch_idx % 50 == 0:
+                writer.add_scalar(f"{model.name()}/Test_loss", running_loss / len(data_loader.dataset), test_log_iter)
+                writer.add_scalar(f"{model.name()}/Test_acc", running_corrects.double() / len(data_loader.dataset), test_log_iter)
+                test_log_iter =+ 1
                 print(f'Test Batch: {batch_idx:4} of {len(data_loader)}')
 
         epoch_loss = running_loss / len(data_loader.dataset)
@@ -243,6 +246,7 @@ if __name__=="__main__":
     parser.add_argument("--num_workers", type=int, default=8)
     parser.add_argument("--model_name", default = "standard")
     parser.add_argument("--save_dir")
+    parser.add_argument("--log_dir", default="/pvc/logs/cv03/")
 
     args = parser.parse_args()
     batch_size = args.batch_size
@@ -252,7 +256,7 @@ if __name__=="__main__":
     num_workers = args.num_workers
     model_name = args.model_name
     save_dir = args.save_dir
-
+    log_dir = args.log_dir
     num_classes = len(CATEGORIES.keys())
     transform = transforms.Compose([
         # you can add other transformations in this list
@@ -271,7 +275,7 @@ if __name__=="__main__":
         exit()
     optimizer = optim.SGD(model.parameters(), lr=args.learning_rate, momentum=momentum)
     criterion = nn.CrossEntropyLoss()
-    writer = SummaryWriter("/pvc/logs/cv03")
+    writer = SummaryWriter(log_dir + model_name)
 
     # load train and test data
     root = './data'
@@ -302,7 +306,8 @@ if __name__=="__main__":
 
     best_acc = 0.0
     since = time.time()
-
+    train_log_iter = 0
+    test_log_iter = 0
     for epoch in range(num_epochs):
 
         print('Epoch {}/{}'.format(epoch, num_epochs - 1))
