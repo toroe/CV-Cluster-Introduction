@@ -5,7 +5,7 @@ metadata:
 spec:
   ports:
   - port: 80
-    targetport: 6006
+    targetPort: 6006
   selector:
     app: cv-tensorboard
 ---

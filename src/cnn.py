@@ -12,6 +12,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from torch.utils.data import DataLoader
+from torch.utils.tensorboard import SummaryWriter
 from torchvision import datasets, transforms, models
 
 CATEGORIES = {
@@ -28,36 +29,7 @@ CATEGORIES = {
 }
 
 
-# implement your own NNs
-class MyALEXNetwork(nn.Module):
-    def __init__(self, num_in_channels, num_classes):
-        super(MyALEXNetwork, self).__init__()
-        
-        self.conv1 = nn.Conv2d(in_channels=num_in_channels, out_channels=24, kernel_size=11, stride=2, padding=(12,11))
-        padding2 = int((2*(num_classes-1) - num_in_channels - 5) * (1/1))
-        self.conv2 = nn.Conv2d(in_channels=24, out_channels=64, kernel_size=5, stride=1, padding=padding2)
-        padding = int((2*(num_classes-1) - num_in_channels - 3) * (1/1))
-        self.conv3 = nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, stride = 1,padding=padding)
-        self.conv4 = nn.Conv2d(in_channels=128, out_channels=64, kernel_size=3, padding=padding)
-        self.maxpool = nn.MaxPool2d(kernel_size=3, stride=1)
-        self.fc1 = nn.Linear(809984, 512)
-        self.fc2 = nn.Linear(512, num_classes)
 
-    def forward(self, x):
-        x = F.relu(self.conv1(x))
-        x = self.maxpool(x)
-        x = F.relu(self.conv2(x))
-        x = self.maxpool(x)
-        x = F.relu(self.conv3(x))
-        x = F.relu(self.conv4(x))
-        x = self.maxpool(x)
-        x = x.reshape(x.shape[0], -1)
-        x = F.relu(self.fc1(x))
-        x = self.fc2(x)
-        return x
-
-    def name(self):
-        return "MyALEXNetwork"
 class MyCNNNetwork3(nn.Module):
     def __init__(self, num_in_channels, num_classes):
         super(MyCNNNetwork3, self).__init__()
@@ -158,46 +130,6 @@ class MyCNNNetwork(nn.Module):
 
     def name(self):
         return "MyCNNNetwork"
-class MyVGGNetwork(nn.Module):
-    def __init__(self, num_in_channels, num_classes):
-        super(MyVGGNetwork, self).__init__()
-        padding = int((2*(num_classes-1) - num_in_channels - 3) * 1)
-        self.conv1_1 = nn.Conv2d(in_channels=num_in_channels, out_channels=16, kernel_size=3, padding=padding)
-        self.conv1_2 = nn.Conv2d(in_channels=16, out_channels=16, kernel_size=3, padding=padding)
-
-        self.conv2_1 = nn.Conv2d(in_channels=16, out_channels=32, kernel_size=3, padding=padding)
-        self.conv2_2 = nn.Conv2d(in_channels=32, out_channels=32, kernel_size=3, padding=padding)
-
-        self.conv3_1 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, padding=padding)
-        self.conv3_2 = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, padding=padding)
-        
-        self.maxpool = nn.MaxPool2d(kernel_size=2, stride=1)
-
-
-        self.fc1 = nn.Linear(2096704, 512)
-        self.fc2 = nn.Linear(512, num_classes)
-
-    def forward(self, x):
-        x = F.relu(self.conv1_1(x))
-        x = F.relu(self.conv1_2(x))
-        x = self.maxpool(x)
-        x = F.dropout(x, 0.25)
-        x = F.relu(self.conv2_1(x))
-        x = F.relu(self.conv2_2(x))
-        x = self.maxpool(x)
-        x = F.dropout(x, 0.25)
-        x = F.relu(self.conv3_1(x))
-        x = F.relu(self.conv3_2(x))
-        x = self.maxpool(x)
-        x = F.dropout(x, 0.25)
-
-        x = x.reshape(x.shape[0], -1)
-        x = F.relu(self.fc1(x)) 
-        x = self.fc2(x)
-        return x
-
-    def name(self):
-        return "MyVGGNetwork"
 
 def training(model, data_loader, optimizer, criterion, device):
     model.train()
@@ -227,6 +159,8 @@ def training(model, data_loader, optimizer, criterion, device):
         running_corrects += torch.sum(preds == labels.data)
 
         if batch_idx % 10 == 0:
+            writer.add_scalar(f"{model.name()}/Train_loss", running_loss / len(data_loader.dataset))
+            writer.add_scalar(f"{model.name()}/Train_acc", running_corrects.double() / len(data_loader.dataset))
             print(f'Training Batch: {batch_idx:4} of {len(data_loader)}')
 
     epoch_loss = running_loss / len(data_loader.dataset)
@@ -239,7 +173,7 @@ def training(model, data_loader, optimizer, criterion, device):
     return epoch_loss, epoch_acc
 
 
-def test(model, data_loader, criterion, device):
+def test(model, data_loader, criterion, writer, device):
     model.eval()
 
     running_loss = 0.0
@@ -263,6 +197,8 @@ def test(model, data_loader, criterion, device):
             running_corrects += torch.sum(preds == labels.data)
 
             if batch_idx % 10 == 0:
+                writer.add_scalar(f"{model.name()}/Test_loss", running_loss / len(data_loader.dataset))
+                writer.add_scalar(f"{model.name()}/Test_acc", running_corrects.double() / len(data_loader.dataset))
                 print(f'Test Batch: {batch_idx:4} of {len(data_loader)}')
 
         epoch_loss = running_loss / len(data_loader.dataset)
@@ -323,22 +259,19 @@ if __name__=="__main__":
         transforms.ToTensor()
     ])
     ## model setup
-    if model_name == "vgg":
-        model = MyVGGNetwork(num_in_channels=1, num_classes=num_classes).to(device)
-    elif model_name == "standard":
+
+    if model_name == "standard":
         model = MyCNNNetwork(1, num_classes).to(device)
     elif model_name == "standard2":
         model = MyCNNNetwork2(1, num_classes).to(device)
     elif model_name == "standard3":
         model = MyCNNNetwork3(1, num_classes).to(device)
-    elif model_name == "alex":
-        model = MyALEXNetwork(1, num_classes).to(device)
     else:
         print("No correct model name provided....\n Exiting....")
         exit()
     optimizer = optim.SGD(model.parameters(), lr=args.learning_rate, momentum=momentum)
     criterion = nn.CrossEntropyLoss()
-    
+    writer = SummaryWriter("/pvc/logs/cv03")
 
     # load train and test data
     root = './data'
