@@ -153,9 +153,6 @@ def training(model, data_loader, optimizer, criterion, device):
         # backward
         loss.backward()
         optimizer.step()
-        writer.add_scalar(f"{model.name()}/Train_loss", loss, train_log_iter)
-        writer.add_scalar(f"{model.name()}/Train_acc", torch.sum(preds==labels.data), train_log_iter)
-        train_log_iter =+ 1
         # statistics
         running_loss += loss.item() * inputs.size(0)
         running_corrects += torch.sum(preds == labels.data)
@@ -191,17 +188,11 @@ def test(model, data_loader, criterion, device):
             loss = criterion(outputs, labels)
 
             _, preds = torch.max(outputs, 1)
-            writer.add_scalar(f"{model.name()}/Train_loss", loss, test_log_iter)
-            writer.add_scalar(f"{model.name()}/Train_acc", torch.sum(preds==labels.data), test_log_iter)
-            test_log_iter =+ 1
             # statistics
             running_loss += loss.item() * inputs.size(0)
             running_corrects += torch.sum(preds == labels.data)
 
             if batch_idx % 50 == 0:
-                writer.add_scalar(f"{model.name()}/Test_loss", running_loss / len(data_loader.dataset), test_log_iter)
-                writer.add_scalar(f"{model.name()}/Test_acc", running_corrects.double() / len(data_loader.dataset), test_log_iter)
-                test_log_iter =+ 1
                 print(f'Test Batch: {batch_idx:4} of {len(data_loader)}')
 
         epoch_loss = running_loss / len(data_loader.dataset)
@@ -275,8 +266,6 @@ if __name__=="__main__":
         exit()
     optimizer = optim.SGD(model.parameters(), lr=args.learning_rate, momentum=momentum)
     criterion = nn.CrossEntropyLoss()
-    writer = SummaryWriter(log_dir + model_name)
-
     # load train and test data
     root = './data'
     train_set = datasets.FashionMNIST(root=root,
