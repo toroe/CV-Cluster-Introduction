@@ -241,7 +241,7 @@ if __name__=="__main__":
     parser.add_argument("--learning_rate", type = float, default=1e-4)
     parser.add_argument("--momentum", type= float, default=0)
     parser.add_argument("--num_workers", type=int, default=8)
-    parser.add_argument("--model_name", default = "standard3")
+    parser.add_argument("--model_name", default = "standard")
     parser.add_argument("--save_dir")
 
     args = parser.parse_args()
